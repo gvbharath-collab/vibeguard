@@ -10,7 +10,7 @@ const send = (res, status, obj) => { res.writeHead(status, { 'content-type': 'ap
 const fail = (res, e) => { if (!(e instanceof AuditError)) { console.error('[audit] unexpected:', e); e = new AuditError('UNEXPECTED', 'Something unexpected happened while auditing that website.', 500); } send(res, e.status, { error: { code: e.code, message: e.message } }); };
 function body(req, max = 4096) { return new Promise((ok, no) => { let s = ''; req.on('data', c => { s += c; if (s.length > max) { no(new AuditError('INVALID_URL', 'Request body too large.', 413)); req.destroy(); } }); req.on('end', () => ok(s)); req.on('error', no); }); }
 
-http.createServer(async (req, res) => {
+const handler = async (req, res) => {
   // Dogfooding: the API sends the headers it recommends.
   res.setHeader('X-Content-Type-Options', 'nosniff'); res.setHeader('X-Frame-Options', 'DENY'); res.setHeader('Referrer-Policy', 'no-referrer');
   res.setHeader('Content-Security-Policy', "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'");
@@ -41,4 +41,11 @@ http.createServer(async (req, res) => {
     }
     send(res, 404, { error: { code: 'NOT_FOUND', message: 'Not found.' } });
   } catch (e) { fail(res, e); }
-}).listen(cfg.port, () => console.log(`VibeGuard API listening on http://localhost:${cfg.port}${cfg.allowPrivate ? '  (ALLOW_PRIVATE_TARGETS=true: dev mode)' : ''}`));
+};
+
+module.exports = handler; // used by the Vercel serverless function in /api
+
+// Standalone mode (npm start): run as a long-lived server. Not started when imported by Vercel.
+if (require.main === module) {
+  http.createServer(handler).listen(cfg.port, () => console.log(`VibeGuard API listening on http://localhost:${cfg.port}${cfg.allowPrivate ? '  (ALLOW_PRIVATE_TARGETS=true: dev mode)' : ''}`));
+}
