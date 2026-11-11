@@ -14,7 +14,8 @@ const handler = async (req, res) => {
   // Dogfooding: the API sends the headers it recommends.
   res.setHeader('X-Content-Type-Options', 'nosniff'); res.setHeader('X-Frame-Options', 'DENY'); res.setHeader('Referrer-Policy', 'no-referrer');
   res.setHeader('Content-Security-Policy', "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'");
-  if (cfg.corsOrigin) { res.setHeader('Access-Control-Allow-Origin', cfg.corsOrigin); res.setHeader('Access-Control-Allow-Headers', 'content-type'); res.setHeader('Access-Control-Allow-Methods', 'POST,GET,OPTIONS'); }
+  // CORS: CORS_ORIGIN is a comma-separated allow-list; the matching request origin is echoed back.
+  if (cfg.corsOrigins.length) { res.setHeader('Vary', 'Origin'); if (cfg.corsOrigins.includes(req.headers.origin)) { res.setHeader('Access-Control-Allow-Origin', req.headers.origin); res.setHeader('Access-Control-Allow-Headers', 'content-type'); res.setHeader('Access-Control-Allow-Methods', 'POST,GET,OPTIONS'); res.setHeader('Access-Control-Max-Age', '600'); } }
   const url = new URL(req.url, 'http://x');
   try {
     if (req.method === 'OPTIONS') { res.writeHead(204); return res.end(); }
